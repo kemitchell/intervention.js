@@ -1,5 +1,3 @@
-// TODO: Index by npm user name, not e-mail
-
 // EventEmitter Construction
 var EventEmitter = require('events').EventEmitter
 var inherits = require('util').inherits
@@ -209,7 +207,6 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
             // It's a match. Emit an event.
             self.emit(event, user, depending, dependency)
           })
-          done()
         })
       })
     },
