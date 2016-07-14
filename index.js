@@ -284,7 +284,7 @@ function packageKey (name, semver) {
 }
 
 function semverFromPackageKey (key) {
-  decodeLevelUPKey(key)[2]
+  return decodeLevelUPKey(key)[2]
 }
 
 function attributionKey (user, name, semver) {
