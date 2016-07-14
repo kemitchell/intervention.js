@@ -107,6 +107,7 @@ prototype._onChange = function (change, done) {
   else { // Registry publish.
     doc = normalize(doc)
     var name = doc.name
+
     // Extract relevant data for each version of the package described
     // by the change document.
     var versions = Object.keys(doc.versions)
