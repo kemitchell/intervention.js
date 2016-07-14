@@ -16,6 +16,9 @@
     "run-parallel": "^1.1.6",
     "semver": "^5.2.0"
   },
+  "files": [
+    "index.js"
+  ],
   "license": "MIT",
   "repository": "kemitchell/intervention.js"
 }
