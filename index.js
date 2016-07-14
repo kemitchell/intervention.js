@@ -130,7 +130,7 @@ prototype._onChange = function (change, done) {
 
       // Put `packages/$name/$semver` -> `{dependencies, devDependencies}`
       // See `_semversOf` for the corresponding query.
-      batch.push(putOperation(packageKey(name, semver), version))
+      batch.push(putOperation(packageKey(name, semver), ''))
 
       // Put `publishers/$name/$user` -> `$semver`
       // See `_publishersOf` for the corresponding query.
