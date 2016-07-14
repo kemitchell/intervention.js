@@ -54,7 +54,7 @@ prototype.emitEventsFor = function (author, devDependencies) {
   }
 }
 
-// Start streaming chagnes and emitting events.
+// Start streaming changes and emitting events.
 prototype.start = function () {
   var self = this
   var pressure = self._pressure = pressureStream(function (change, next) {
@@ -69,7 +69,7 @@ prototype.start = function () {
   var changes = self._changes = changesStream({
     db: 'https://replicate.npmjs.com',
     include_docs: true,
-    sicne: self._fromSequence
+    since: self._fromSequence
   })
   pump(changes, pressure)
 }
@@ -134,7 +134,7 @@ prototype._onChange = function (change, done) {
 
 prototype._emitEvents = function (name, version, dependencies, devDependencies, callback) {
   // Emit `dependency` and `devDependency` events.
-  var depending = {name: name, verfsion: version}
+  var depending = {name: name, version: version}
   runParallel([
     this._emitEvent.bind(this, 'dependency', depending, dependencies),
     this._emitEvent.bind(this, 'devDependency', depending, devDependencies)
