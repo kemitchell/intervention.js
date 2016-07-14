@@ -52,6 +52,7 @@ prototype.emitEventsFor = function (author, devDependencies) {
     // Emit events for changes after the current sequence number.
     from: this.sequence() + 1
   }
+  return this
 }
 
 // Start streaming changes and emitting events.
