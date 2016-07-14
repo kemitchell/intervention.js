@@ -122,7 +122,7 @@ prototype._onChange = function (change, done) {
     })
     // Prepare a batch of LevelUP put operations.
     var batch = []
-    versions.forEach(function (version) {
+    versions.forEach(function addBatchOperationsFor (version) {
       var semver = version.semver
       // Put `name/semver` -> {dependencies, devDependencies}
       batch.push(putOperation(
@@ -132,11 +132,12 @@ prototype._onChange = function (change, done) {
       // Put `user/package/semver` -> placeholder
       version.contributors
       .concat(version.author)
-      .forEach(function (user) {
-        var key = userKey(user, name, semver)
+      .forEach(function addAttributionOperation (user) {
+        var key = attributionKey(user, name, semver)
         batch.push(putOperation(key, EMPTY_VALUE))
       })
     })
+    // Commit the batch.
     self._levelup.batch(batch, function (error) {
       if (error) {
         self.emit('error', error)
@@ -180,12 +181,19 @@ prototype._emitEvents = function (
 prototype._emitEvent = function (event, depending, dependencies, callback) {
   var self = this
   var sequence = self.sequence()
+  // Check each dependency of the new package version.
   asyncMap(
-    // Check each dependency of the new package version.
+    // Turn:
+    //     {x: '^1.0.0', y: '^2.0.0'}
+    // into:
+    //     [
+    //       {name: 'x', range: '^1.0.0'},
+    //       {name: 'y', range: '^2.0.0'}
+    //     ]
     Object.keys(dependencies).map(function (name) {
       return {name: name, range: dependencies[name]}
     }),
-    function (dependency, done) {
+    function emitEventsFor (dependency, done) {
       // List all known versions of the dependency.
       var name = dependency.name
       self._semversOf(name, function (error, versions) {
@@ -219,7 +227,7 @@ prototype._semversOf = function (name, callback) {
   var self = this
   var semvers = []
   // Scan keys from `package/semver/` through `package/semver/~`.
-  // Keys are URI-encoded ASCII, therefore `~` is high.
+  // Keys are URI-encoded ASCII, so `~` is high.
   var stream = self._levelup.createReadStream({
     gte: packageKey(name, ''),
     lte: packageKey(name, '~'),
@@ -279,7 +287,7 @@ function semverFromPackageKey (key) {
   decodeLevelUPKey(key)[2]
 }
 
-function userKey (user, name, semver) {
+function attributionKey (user, name, semver) {
   return encodeLevelUPKey('users', user, name, semver)
 }
 
