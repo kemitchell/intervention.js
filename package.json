@@ -16,9 +16,15 @@
     "run-parallel": "^1.1.6",
     "semver": "^5.2.0"
   },
+  "devDependencies": {
+    "standard": "^7.1.2"
+  },
   "files": [
     "index.js"
   ],
   "license": "MIT",
-  "repository": "kemitchell/intervention.js"
+  "repository": "kemitchell/intervention.js",
+  "scripts": {
+    "lint": "standard"
+  }
 }
