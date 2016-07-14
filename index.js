@@ -65,7 +65,8 @@ prototype.emitEventsFor = function (user, devDependencies, from) {
 // Start streaming changes and emitting events.
 prototype.start = function () {
   var self = this
-  var pressure = self._pressure = pressureStream(function (change, next) {
+  var pressure = self._pressure =
+  pressureStream(function (change, next) {
     self._onChange(change, function (error, data) {
       if (error) return next(error)
       self._setSequence(change.seq, next)
@@ -109,10 +110,14 @@ prototype._onChange = function (change, done) {
         dependencies: data.dependencies,
         devDependencies: data.devDependencies
       }
-      if (data.author && data.author.email) returned.author = data.author.email
+      if (data.author && data.author.email) {
+        returned.author = data.author.email
+      }
       if (data.contributors) {
         data.contributors.forEach(function (contributor) {
-          if (contributor.email) returned.contributors.push(contributor.email)
+          if (contributor.email) {
+            returned.contributors.push(contributor.email)
+          }
         })
       }
       return returned
@@ -153,19 +158,22 @@ prototype._onChange = function (change, done) {
   }
 }
 
-prototype._emitEvents = function (name, semver, dependencies, devDependencies, callback) {
+prototype._emitEvents = function (
+  name, semver, dependencies, devDependencies, callback
+) {
   // Emit `dependency` and `devDependency` events.
   var self = this
   var depending = {name: name, semver: semver}
+  var emit = self.emit.bind(self)
   runParallel([
     function (done) {
       if (dependencies) {
-        self._emitEvent('dependency', depending, dependencies, done)
+        emit('dependency', depending, dependencies, done)
       } else done()
     },
     function (done) {
       if (devDependencies) {
-        self._emitEvent('devDependency', depending, devDependencies, done)
+        emit('devDependency', depending, devDependencies, done)
       } else done()
     }
   ], callback)
@@ -181,12 +189,13 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
     }),
     function (dependency, done) {
       // List all known versions of the dependency.
-      self._semversOf(dependency.name, function (error, versions) {
+      var name = dependency.name
+      self._semversOf(name, function (error, versions) {
         if (error) return done(error)
         // Find the highest version that satisfies the dependency range.
         var maxSatisfying = semver.maxSatisfying(versions, dependency.range)
         // Find the author and users behind that dependency.
-        self._usersBehind(dependency.name, maxSatisfying, function (error, users) {
+        self._usersBehind(name, maxSatisfying, function (error, users) {
           if (error) return done(error)
           // For the author and each contributor...
           users.forEach(function (user) {
@@ -200,6 +209,7 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
             // It's a match. Emit an event.
             self.emit(event, user, depending, dependency)
           })
+          done()
         })
       })
     },
@@ -232,7 +242,8 @@ prototype._semversOf = function (name, callback) {
 
 prototype._usersBehind = function (name, semver, callback) {
   var self = this
-  self._levelup.get(packageKey(name, semver), function (error, data) {
+  var key = packageKey(name, semver)
+  self._levelup.get(key, function (error, data) {
     if (error) {
       if (error.notFound) callback(null, [])
       else callback(error)
