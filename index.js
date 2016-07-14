@@ -29,7 +29,7 @@ function Intervention (levelup, fromSequence) {
   this._levelup = levelup
   // The last-processed change sequence number.
   this._sequence = 0
-  // Settings for which events to emit.
+  // Data about authors for which to emit events.
   this._emittingEventsFor = {}
 }
 
@@ -42,10 +42,10 @@ var prototype = Intervention.prototype
 // Get the current change sequence number.
 prototype.sequence = function () { return this._sequence }
 
-// In the future, emit events for an author.
+// Emit events for an author.
 prototype.emitEventsFor = function (author, devDependencies, from) {
   this._emittingEventsFor[author] = {
-    // By default, emit events for dependencies and devDependencies.
+    // By default, emit events for dependencies, not devDependencies.
     events: devDependencies
       ? ['dependency', 'devDependency']
       : ['dependency'],
@@ -108,12 +108,12 @@ prototype._onChange = function (change, done) {
     var batch = []
     versions.forEach(function (version) {
       var semver = version.semver
-      // Put name/semver -> {dependencies, devDependencies}
+      // Put `name/semver` -> {dependencies, devDependencies}
       batch.push(putOperation(
         packageKey(name, semver),
         pick(version, ['dependencies', 'devDependencies'])
       ))
-      // Put user/package/semver -> placeholder
+      // Put `user/package/semver` -> placeholder
       version.contributors
       .concat(version.author)
       .forEach(function (person) {
@@ -123,7 +123,7 @@ prototype._onChange = function (change, done) {
     })
     self._levelup.batch(batch, function (error) {
       if (error) self.emit('error', error)
-      // Emit events.
+      // Emit any events.
       mapSeries(versions, function (version, done) {
         self._emitEvents(version.dependencies, version.devDependencies, done)
       }, done)
@@ -180,8 +180,8 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
 prototype._semversOf = function (name, callback) {
   var self = this
   var semvers = []
-  // Scan keys from package/semver/ through package/semver/~.
-  // Keys are URI-encoded ASCII, therefore "~" is high.
+  // Scan keys from `package/semver/` through `package/semver/~`.
+  // Keys are URI-encoded ASCII, therefore `~` is high.
   var stream = self._levelup.createReadStream({
     gte: packageKey(name, ''),
     lte: packageKey(name, '~'),
