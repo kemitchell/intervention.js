@@ -23,7 +23,7 @@ module.exports = Intervention
 
 function Intervention (levelup, fromSequence) {
   if (!(this instanceof Intervention)) {
-    return new Intervention()
+    return new Intervention(levelup, fromSequence)
   }
   this._fromSequence = fromSequence || 0
   this._levelup = levelup
