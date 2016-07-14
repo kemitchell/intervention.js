@@ -207,6 +207,7 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
             // It's a match. Emit an event.
             self.emit(event, user, depending, dependency)
           })
+          done()
         })
       })
     },
