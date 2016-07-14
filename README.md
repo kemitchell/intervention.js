@@ -13,18 +13,18 @@ var emitter = new Intervention(memdb())
   // from update 458344.
   458344
 )
-.on('dependency', function (person, depending, dependency) {
+.on('dependency', function (user, depending, dependency) {
   console.log(
     '%s@%s depends on %s\'s %s@%s',
     depending.name, depending.semver,
-    person, dependency.name, dependency.range
+    user, dependency.name, dependency.range
   )
 })
-.on('devDependency', function (person, depending, dependency) {
+.on('devDependency', function (user, depending, dependency) {
   console.log(
     '%s@%s depends on %s\'s %s@%s',
     depending.name, depending.semver,
-    person, dependency.name, dependency.range
+    user, dependency.name, dependency.range
   )
 })
 emitter.start()
