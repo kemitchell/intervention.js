@@ -5,12 +5,11 @@ var inherits = require('util').inherits
 // npm Public Registry
 var changesStream = require('changes-stream')
 var normalize = require('normalize-registry-metadata')
-var semver = require('semver')
+var maxSatisfying = require('semver').maxSatisfying
 
 // Utilities
 var pressureStream = require('pressure-stream')
 var pump = require('pump')
-var pick = require('object.pick')
 
 // Flow Control
 var asyncMap = require('async.map')
@@ -87,8 +86,6 @@ prototype.stop = function () {
 
 // Private Prototype Functions
 
-var EMPTY_VALUE = ''
-
 prototype._onChange = function (change, done) {
   var self = this
   self._sequence = change.seq
@@ -108,12 +105,12 @@ prototype._onChange = function (change, done) {
         dependencies: data.dependencies,
         devDependencies: data.devDependencies
       }
-      if (data.author && data.author.email) {
+      if (data.author && data.author.email && isString(data.author.email)) {
         returned.author = data.author.email
       }
-      if (data.contributors) {
+      if (data.contributors && Array.isArray(data.contributors)) {
         data.contributors.forEach(function (contributor) {
-          if (contributor.email) {
+          if (contributor.email && isString(contributor.email)) {
             returned.contributors.push(contributor.email)
           }
         })
@@ -125,17 +122,7 @@ prototype._onChange = function (change, done) {
     versions.forEach(function addBatchOperationsFor (version) {
       var semver = version.semver
       // Put `name/semver` -> {dependencies, devDependencies}
-      batch.push(putOperation(
-        packageKey(name, semver),
-        pick(version, ['dependencies', 'devDependencies'])
-      ))
-      // Put `user/package/semver` -> placeholder
-      version.contributors
-      .concat(version.author)
-      .forEach(function addAttributionOperation (user) {
-        var key = attributionKey(user, name, semver)
-        batch.push(putOperation(key, EMPTY_VALUE))
-      })
+      batch.push(putOperation(packageKey(name, semver), version))
     })
     // Commit the batch.
     self._levelup.batch(batch, function (error) {
@@ -146,7 +133,7 @@ prototype._onChange = function (change, done) {
       // Emit events.
       mapSeries(versions, function (version, done) {
         self._emitEvents(
-          name, semver,
+          name, version.semver,
           version.dependencies, version.devDependencies,
           done
         )
@@ -162,16 +149,16 @@ prototype._emitEvents = function (
 ) {
   // Emit `dependency` and `devDependency` events.
   var depending = {name: name, semver: semver}
-  var emit = this.emit.bind(this)
+  var emitEvent = this._emitEvent.bind(this)
   runParallel([
     function (done) {
       if (dependencies) {
-        emit('dependency', depending, dependencies, done)
+        emitEvent('dependency', depending, dependencies, done)
       } else done()
     },
     function (done) {
       if (devDependencies) {
-        emit('devDependency', depending, devDependencies, done)
+        emitEvent('devDependency', depending, devDependencies, done)
       } else done()
     }
   ], callback)
@@ -197,20 +184,23 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
       var name = dependency.name
       self._semversOf(name, function (error, versions) {
         if (error) return done(error)
+        if (versions.length === 0) return done()
         // Find the highest version that satisfies the dependency range.
-        var maxSatisfying = semver.maxSatisfying(versions, dependency.range)
+        var max = maxSatisfying(versions, dependency.range)
+        if (max === null) return done()
         // Find the author and users behind that dependency.
-        self._usersBehind(name, maxSatisfying, function (error, users) {
+        self._usersBehind(name, max, function (error, users) {
           if (error) return done(error)
+          if (users.length === 0) return done()
           // For the author and each contributor...
           users.forEach(function (user) {
             var options = self._emittingEventsFor[user]
             // Not emitting events for this user.
-            if (!options) return
+            if (options === undefined) return
             // Not emitting this kind of event for the user.
             if (options.events.indexOf(event) === -1) return
             // Not emitting notifications for this user at this sequence.
-            if (options.from < sequence) return
+            if (options.from > sequence) return
             // It's a match. Emit an event.
             self.emit(event, user, depending, dependency)
           })
@@ -249,7 +239,9 @@ prototype._usersBehind = function (name, semver, callback) {
       else callback(error)
     } else {
       var parsed = JSON.parse(data)
-      var users = parsed.contributors.concat(parsed.author)
+      var users = parsed.contributors
+      .concat(parsed.author)
+      .filter(isString)
       callback(null, users)
     }
   })
@@ -271,6 +263,10 @@ function validSequence (argument) {
   return Number.isInteger(argument) && argument > 0
 }
 
+function isString (argument) {
+  return typeof argument === 'string' && argument.length !== 0
+}
+
 // LevelUP Helper Functions
 
 function packageKey (name, semver) {
@@ -279,10 +275,6 @@ function packageKey (name, semver) {
 
 function semverFromPackageKey (key) {
   return decodeLevelUPKey(key)[2]
-}
-
-function attributionKey (user, name, semver) {
-  return encodeLevelUPKey('users', user, name, semver)
 }
 
 var encode = encodeURIComponent
