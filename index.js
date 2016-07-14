@@ -16,7 +16,7 @@ var pick = require('object.pick')
 
 // Flow Control
 var asyncMap = require('async.map')
-var mapSeries = require('async.mapSeries')
+var mapSeries = require('async.mapseries')
 var runParallel = require('run-parallel')
 
 module.exports = Intervention
@@ -68,18 +68,22 @@ prototype.start = function () {
   var pressure = self._pressure = pressureStream(function (change, next) {
     self._onChange(change, function (error, data) {
       if (error) return next(error)
-      self._setSequence(change.seq, function (error) {
-        next(error, data)
-      })
+      self._setSequence(change.seq, next)
     })
   }, {high: 1, max: 1, low: 1})
-  .on('data', self._onChange)
   var changes = self._changes = changesStream({
     db: 'https://replicate.npmjs.com',
     include_docs: true,
     since: self._fromSequence
   })
   pump(changes, pressure)
+  .on('error', function (error) {
+    self.emit('error', error)
+  })
+}
+
+prototype.stop = function () {
+  this._changes.destroy()
 }
 
 // Private Prototype Functions
@@ -90,7 +94,7 @@ prototype._onChange = function (change, done) {
   var self = this
   self._sequence = change.seq
   var doc = change.doc
-  if (doc.name) { // Registry change.
+  if (doc.name && doc.versions) { // Registry publish.
     doc = normalize(doc)
     var name = doc.name
     // Extract relevant data for each version of the package described
@@ -106,9 +110,11 @@ prototype._onChange = function (change, done) {
         devDependencies: data.devDependencies
       }
       if (data.author && data.author.email) returned.author = data.author.email
-      data.contributors.forEach(function (contributor) {
-        if (contributor.email) returned.contributors.push(contributor.email)
-      })
+      if (data.contributors) {
+        data.contributors.forEach(function (contributor) {
+          if (contributor.email) returned.contributors.push(contributor.email)
+        })
+      }
       return returned
     })
     // Prepare a batch of LevelUP put operations.
@@ -129,10 +135,17 @@ prototype._onChange = function (change, done) {
       })
     })
     self._levelup.batch(batch, function (error) {
-      if (error) self.emit('error', error)
-      // Emit any events.
+      if (error) {
+        self.emit('error', error)
+        done()
+      }
+      // Emit events.
       mapSeries(versions, function (version, done) {
-        self._emitEvents(version.dependencies, version.devDependencies, done)
+        self._emitEvents(
+          name, semver,
+          version.dependencies, version.devDependencies,
+          done
+        )
       }, done)
     })
   } else { // CouchDB design doc.
@@ -140,12 +153,21 @@ prototype._onChange = function (change, done) {
   }
 }
 
-prototype._emitEvents = function (name, version, dependencies, devDependencies, callback) {
+prototype._emitEvents = function (name, semver, dependencies, devDependencies, callback) {
   // Emit `dependency` and `devDependency` events.
-  var depending = {name: name, version: version}
+  var self = this
+  var depending = {name: name, semver: semver}
   runParallel([
-    this._emitEvent.bind(this, 'dependency', depending, dependencies),
-    this._emitEvent.bind(this, 'devDependency', depending, devDependencies)
+    function (done) {
+      if (dependencies) {
+        self._emitEvent('dependency', depending, dependencies, done)
+      } else done()
+    },
+    function (done) {
+      if (devDependencies) {
+        self._emitEvent('devDependency', depending, devDependencies, done)
+      } else done()
+    }
   ], callback)
 }
 
@@ -180,7 +202,8 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
           })
         })
       })
-    }
+    },
+    callback
   )
 }
 
@@ -210,8 +233,10 @@ prototype._semversOf = function (name, callback) {
 prototype._usersBehind = function (name, semver, callback) {
   var self = this
   self._levelup.get(packageKey(name, semver), function (error, data) {
-    if (error) callback(error)
-    else {
+    if (error) {
+      if (error.notFound) callback(null, [])
+      else callback(error)
+    } else {
       var parsed = JSON.parse(data)
       var users = parsed.contributors.concat(parsed.author)
       callback(null, users)
@@ -222,7 +247,7 @@ prototype._usersBehind = function (name, semver, callback) {
 var SEQUENCE_KEY = 'sequence'
 
 prototype._setSequence = function (sequence, callback) {
-  this._levelup.set(SEQUENCE_KEY, sequence, callback)
+  this._levelup.put(SEQUENCE_KEY, sequence, callback)
 }
 
 // Argument Validation
