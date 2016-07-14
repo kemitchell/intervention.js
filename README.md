@@ -4,10 +4,10 @@ var memdb = require('memdb')
 
 var emitter = new Intervention(memdb())
 // Emit events for new deps.
-.emitEventsFor('author@example.com')
+.emitEventsFor('npmusername')
 // Emit events...
 .emitEventsFor(
-  'another@example.com',
+  'another',
   // for devDeps as well as deps...
   true,
   // from update 458344.

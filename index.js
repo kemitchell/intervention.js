@@ -62,6 +62,8 @@ prototype.emitEventsFor = function (user, devDependencies, from) {
 // Start streaming changes and emitting events.
 prototype.start = function () {
   var self = this
+  // The following approach to backpressure comes directly from
+  // https://www.npmjs.com/package/concurrent-couch-follower.
   var pressure = self._pressure =
   pressureStream(function (change, next) {
     self._onChange(change, function (error, data) {
@@ -98,31 +100,27 @@ prototype._onChange = function (change, done) {
     var versions = Object.keys(doc.versions)
     .map(function extractRelevantData (semver) {
       var data = doc.versions[semver]
-      var returned = {
+      return {
         semver: semver,
-        author: null,
-        contributors: [],
+        // Changes 1 through 64 lack `_npmUser`.
+        publisher: data._npmUser ? data._npmUser.name : false,
         dependencies: data.dependencies,
         devDependencies: data.devDependencies
       }
-      if (data.author && data.author.email && isString(data.author.email)) {
-        returned.author = data.author.email
-      }
-      if (data.contributors && Array.isArray(data.contributors)) {
-        data.contributors.forEach(function (contributor) {
-          if (contributor.email && isString(contributor.email)) {
-            returned.contributors.push(contributor.email)
-          }
-        })
-      }
-      return returned
     })
     // Prepare a batch of LevelUP put operations.
     var batch = []
     versions.forEach(function addBatchOperationsFor (version) {
       var semver = version.semver
-      // Put `name/semver` -> {dependencies, devDependencies}
+      var publisher = version.publisher
+      // Put `packages/$name/$semver` -> `{dependencies, devDependencies}`
+      // See `_semversOf` for the corresponding query.
       batch.push(putOperation(packageKey(name, semver), version))
+      // Put `publishers/$name/$user` -> `$semver`
+      // See `_publishersOf` for the corresponding query.
+      if (version.publisher) {
+        batch.push(putOperation(publisherKey(name, publisher), ''))
+      }
     })
     // Commit the batch.
     self._levelup.batch(batch, function (error) {
@@ -188,12 +186,12 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
         // Find the highest version that satisfies the dependency range.
         var max = maxSatisfying(versions, dependency.range)
         if (max === null) return done()
-        // Find the author and users behind that dependency.
-        self._usersBehind(name, max, function (error, users) {
+        // Find the author and users who have published that dependency.
+        self._publishersOf(name, max, function (error, publishers) {
           if (error) return done(error)
-          if (users.length === 0) return done()
+          if (publishers.length === 0) return done()
           // For the author and each contributor...
-          users.forEach(function (user) {
+          publishers.forEach(function (user) {
             var options = self._emittingEventsFor[user]
             // Not emitting events for this user.
             if (options === undefined) return
@@ -213,37 +211,37 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
 }
 
 prototype._semversOf = function (name, callback) {
-  var semvers = []
-  // Scan keys from `package/semver/` through `package/semver/~`.
-  // Keys are URI-encoded ASCII, so `~` is high.
+  this._collectKeyComponents(
+    packageKey(name, ''),
+    packageKey(name, '~'),
+    semverFromPackageKey,
+    callback
+  )
+}
+
+prototype._publishersOf = function (name, semver, callback) {
+  this._collectKeyComponents(
+    publisherKey(name, ''),
+    publisherKey(name, '~'),
+    publisherFromKey,
+    callback
+  )
+}
+
+prototype._collectKeyComponents = function (gte, lte, pickComponent, callback) {
+  var collected = []
   this._levelup.createReadStream({
-    gte: packageKey(name, ''),
-    lte: packageKey(name, '~'),
+    gte: gte,
+    lte: lte,
     keys: true,
     values: false
   })
   .on('error', callback)
   .on('data', function (key) {
-    semvers.push(semverFromPackageKey(key))
+    collected.push(pickComponent(key))
   })
   .on('end', function () {
-    callback(null, semvers)
-  })
-}
-
-prototype._usersBehind = function (name, semver, callback) {
-  var key = packageKey(name, semver)
-  this._levelup.get(key, function (error, data) {
-    if (error) {
-      if (error.notFound) callback(null, [])
-      else callback(error)
-    } else {
-      var parsed = JSON.parse(data)
-      var users = parsed.contributors
-      .concat(parsed.author)
-      .filter(isString)
-      callback(null, users)
-    }
+    callback(null, collected)
   })
 }
 
@@ -263,10 +261,6 @@ function validSequence (argument) {
   return Number.isInteger(argument) && argument > 0
 }
 
-function isString (argument) {
-  return typeof argument === 'string' && argument.length !== 0
-}
-
 // LevelUP Helper Functions
 
 function packageKey (name, semver) {
@@ -274,6 +268,14 @@ function packageKey (name, semver) {
 }
 
 function semverFromPackageKey (key) {
+  return decodeLevelUPKey(key)[2]
+}
+
+function publisherKey (name, user) {
+  return encodeLevelUPKey('publisher', name, user)
+}
+
+function publisherFromKey (key) {
   return decodeLevelUPKey(key)[2]
 }
 
