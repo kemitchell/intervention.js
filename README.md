@@ -3,13 +3,13 @@ var Intervention = require('intervention')
 var memdb = require('memdb')
 
 var emitter = new Intervention(memdb())
-// Emit events for new deps and devDeps.
+// Emit events for new deps.
 .emitEventsFor('author@example.com')
 // Emit events...
 .emitEventsFor(
   'another@example.com',
-  // just for deps, not devDeps...
-  false,
+  // for devDeps as well as deps...
+  true,
   // from update 458344.
   458344
 )
