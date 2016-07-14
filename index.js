@@ -161,9 +161,8 @@ prototype._emitEvents = function (
   name, semver, dependencies, devDependencies, callback
 ) {
   // Emit `dependency` and `devDependency` events.
-  var self = this
   var depending = {name: name, semver: semver}
-  var emit = self.emit.bind(self)
+  var emit = this.emit.bind(this)
   runParallel([
     function (done) {
       if (dependencies) {
@@ -224,11 +223,10 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
 }
 
 prototype._semversOf = function (name, callback) {
-  var self = this
   var semvers = []
   // Scan keys from `package/semver/` through `package/semver/~`.
   // Keys are URI-encoded ASCII, so `~` is high.
-  self._levelup.createReadStream({
+  this._levelup.createReadStream({
     gte: packageKey(name, ''),
     lte: packageKey(name, '~'),
     keys: true,
@@ -244,9 +242,8 @@ prototype._semversOf = function (name, callback) {
 }
 
 prototype._usersBehind = function (name, semver, callback) {
-  var self = this
   var key = packageKey(name, semver)
-  self._levelup.get(key, function (error, data) {
+  this._levelup.get(key, function (error, data) {
     if (error) {
       if (error.notFound) callback(null, [])
       else callback(error)
