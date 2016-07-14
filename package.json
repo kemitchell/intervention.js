@@ -25,6 +25,7 @@
   "license": "MIT",
   "repository": "kemitchell/intervention.js",
   "scripts": {
-    "lint": "standard"
+    "lint": "standard",
+    "test": "true"
   }
 }
