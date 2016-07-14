@@ -245,8 +245,8 @@ function semverFromPackageKey (key) {
   decodeLevelUPKey(key)[2]
 }
 
-function userKey (user) {
-  return encodeLevelUPKey('users', user)
+function userKey (user, name, semver) {
+  return encodeLevelUPKey('users', user, name, semver)
 }
 
 var encode = encodeURIComponent
