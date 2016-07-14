@@ -22,6 +22,9 @@ var runParallel = require('run-parallel')
 module.exports = Intervention
 
 function Intervention (levelup, fromSequence) {
+  if (fromSequence !== undefined && !validSequence(fromSequence)) {
+    throw new Error('invalid sequence number')
+  }
   if (!(this instanceof Intervention)) {
     return new Intervention(levelup, fromSequence)
   }
@@ -44,6 +47,10 @@ prototype.sequence = function () { return this._sequence }
 
 // Emit events for an author.
 prototype.emitEventsFor = function (author, devDependencies, from) {
+  if (!validAuthor(author)) throw new Error('invalid author')
+  if (from !== undefined && !validSequence(from)) {
+    throw new Error('invalid sequence number')
+  }
   this._emittingEventsFor[author] = {
     // By default, emit events for dependencies, not devDependencies.
     events: devDependencies
@@ -216,6 +223,16 @@ var SEQUENCE_KEY = 'sequence'
 
 prototype._setSequence = function (sequence, callback) {
   this._levelup.set(SEQUENCE_KEY, sequence, callback)
+}
+
+// Argument Validation
+
+function validAuthor (argument) {
+  return typeof argument === 'string' && argument.length !== 0
+}
+
+function validSequence (argument) {
+  return Number.isInteger(argument) && argument > 0
 }
 
 // LevelUP Helper Functions
