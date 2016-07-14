@@ -228,16 +228,13 @@ prototype._semversOf = function (name, callback) {
   var semvers = []
   // Scan keys from `package/semver/` through `package/semver/~`.
   // Keys are URI-encoded ASCII, so `~` is high.
-  var stream = self._levelup.createReadStream({
+  self._levelup.createReadStream({
     gte: packageKey(name, ''),
     lte: packageKey(name, '~'),
     keys: true,
     values: false
   })
-  .on('error', function (error) {
-    stream.destroy()
-    callback(error)
-  })
+  .on('error', callback)
   .on('data', function (key) {
     semvers.push(semverFromPackageKey(key))
   })
