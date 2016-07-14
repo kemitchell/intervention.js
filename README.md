@@ -15,14 +15,16 @@ var emitter = new Intervention(memdb())
 )
 .on('dependency', function (person, depending, dependency) {
   console.log(
-    '%s depends on %s\'s %s',
-    depending.name, person, dependency.name
+    '%s@%s depends on %s\'s %s@%s',
+    depending.name, depending.semver,
+    person, dependency.name, dependency.range
   )
 })
 .on('devDependency', function (person, depending, dependency) {
   console.log(
-    '%s depends on %s\'s %s',
-    depending.name, person, dependency.name
+    '%s@%s depends on %s\'s %s@%s',
+    depending.name, depending.semver,
+    person, dependency.name, dependency.range
   )
 })
 emitter.start()
