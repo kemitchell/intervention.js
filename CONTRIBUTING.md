@@ -1,4 +1,4 @@
-Patches are most welcome!
+Pull requests via [GitHub] are most welcome!
 
 Please:
 
@@ -10,6 +10,8 @@ Please:
 3. Add yourself to `AUTHORS`.
 
 4. License your contributions under the existing, MIT-style terms.
+
+[GitHub]: https://github.com/kemitchell/intervention.js
 
 [Standard]: https://www.npmjs.com/package/standard
 
