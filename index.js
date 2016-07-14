@@ -246,7 +246,7 @@ prototype._publishersOf = function (name, semver, callback) {
   this._collectKeyComponents(
     publisherKey(name, ''),
     publisherKey(name, '~'),
-    publisherFromKey,
+    publisherFromPublisherKey,
     callback
   )
 }
@@ -298,7 +298,7 @@ function publisherKey (name, user) {
   return encodeLevelUPKey('publisher', name, user)
 }
 
-function publisherFromKey (key) {
+function publisherFromPublisherKey (key) {
   return decodeLevelUPKey(key)[2]
 }
 
