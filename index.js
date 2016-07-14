@@ -32,7 +32,7 @@ function Intervention (levelup, fromSequence) {
   this._levelup = levelup
   // The last-processed change sequence number.
   this._sequence = 0
-  // Data about authors for which to emit events.
+  // Data about npm users for which to emit events.
   this._emittingEventsFor = {}
 }
 
@@ -45,13 +45,13 @@ var prototype = Intervention.prototype
 // Get the current change sequence number.
 prototype.sequence = function () { return this._sequence }
 
-// Emit events for an author.
-prototype.emitEventsFor = function (author, devDependencies, from) {
-  if (!validAuthor(author)) throw new Error('invalid author')
+// Emit events for an npm user.
+prototype.emitEventsFor = function (user, devDependencies, from) {
+  if (!validUser(user)) throw new Error('invalid user')
   if (from !== undefined && !validSequence(from)) {
     throw new Error('invalid sequence number')
   }
-  this._emittingEventsFor[author] = {
+  this._emittingEventsFor[user] = {
     // By default, emit events for dependencies, not devDependencies.
     events: devDependencies
       ? ['dependency', 'devDependency']
@@ -123,8 +123,8 @@ prototype._onChange = function (change, done) {
       // Put `user/package/semver` -> placeholder
       version.contributors
       .concat(version.author)
-      .forEach(function (person) {
-        var key = contributorKey(person, name, semver)
+      .forEach(function (user) {
+        var key = userKey(user, name, semver)
         batch.push(putOperation(key, EMPTY_VALUE))
       })
     })
@@ -163,20 +163,20 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
         if (error) return done(error)
         // Find the highest version that satisfies the dependency range.
         var maxSatisfying = semver.maxSatisfying(versions, dependency.range)
-        // Find the author and contributors behind that dependency.
-        self._peopleBehind(dependency.name, maxSatisfying, function (error, people) {
+        // Find the author and users behind that dependency.
+        self._usersBehind(dependency.name, maxSatisfying, function (error, users) {
           if (error) return done(error)
           // For the author and each contributor...
-          people.forEach(function (person) {
-            var options = self._emittingEventsFor[person]
-            // Not emitting events for this person.
+          users.forEach(function (user) {
+            var options = self._emittingEventsFor[user]
+            // Not emitting events for this user.
             if (!options) return
-            // Not emitting this kind of event for the person.
+            // Not emitting this kind of event for the user.
             if (options.events.indexOf(event) === -1) return
-            // Not emitting notifications for this person at this sequence.
+            // Not emitting notifications for this user at this sequence.
             if (options.from < sequence) return
             // It's a match. Emit an event.
-            self.emit(event, person, depending, dependency)
+            self.emit(event, user, depending, dependency)
           })
         })
       })
@@ -207,14 +207,14 @@ prototype._semversOf = function (name, callback) {
   })
 }
 
-prototype._peopleBehind = function (name, semver, callback) {
+prototype._usersBehind = function (name, semver, callback) {
   var self = this
   self._levelup.get(packageKey(name, semver), function (error, data) {
     if (error) callback(error)
     else {
       var parsed = JSON.parse(data)
-      var people = parsed.contributors.concat(parsed.author)
-      callback(null, people)
+      var users = parsed.contributors.concat(parsed.author)
+      callback(null, users)
     }
   })
 }
@@ -227,7 +227,7 @@ prototype._setSequence = function (sequence, callback) {
 
 // Argument Validation
 
-function validAuthor (argument) {
+function validUser (argument) {
   return typeof argument === 'string' && argument.length !== 0
 }
 
@@ -245,8 +245,8 @@ function semverFromPackageKey (key) {
   decodeLevelUPKey(key)[2]
 }
 
-function contributorKey (name) {
-  return encodeLevelUPKey('people', name)
+function userKey (user) {
+  return encodeLevelUPKey('users', user)
 }
 
 var encode = encodeURIComponent
