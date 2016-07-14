@@ -130,12 +130,12 @@ prototype._onChange = function (change, done) {
 
       // Put `packages/$name/$semver` -> `{dependencies, devDependencies}`
       // See `_semversOf` for the corresponding query.
-      batch.push(putOperation(packageKey(name, semver), ''))
+      batch.push(putOperation(packageKey(name, semver)))
 
       // Put `publishers/$name/$user` -> `$semver`
       // See `_publishersOf` for the corresponding query.
       if (version.publisher) {
-        batch.push(putOperation(publisherKey(name, publisher), ''))
+        batch.push(putOperation(publisherKey(name, publisher)))
       }
     })
 
@@ -314,5 +314,5 @@ function decodeLevelUPKey (key) {
 }
 
 function putOperation (key, value) {
-  return {type: 'put', key: key, value: JSON.stringify(value)}
+  return {type: 'put', key: key, value: ''}
 }
