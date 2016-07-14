@@ -154,8 +154,8 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
   var sequence = self.sequence()
   asyncMap(
     // Check each dependency of the new package version.
-    Object.keys(dependencies).map(function (dependencyName) {
-      return {name: dependencyName, range: dependencies[dependencyName]}
+    Object.keys(dependencies).map(function (name) {
+      return {name: name, range: dependencies[name]}
     }),
     function (dependency, done) {
       // List all known versions of the dependency.
