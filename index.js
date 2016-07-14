@@ -43,14 +43,14 @@ var prototype = Intervention.prototype
 prototype.sequence = function () { return this._sequence }
 
 // In the future, emit events for an author.
-prototype.emitEventsFor = function (author, devDependencies) {
+prototype.emitEventsFor = function (author, devDependencies, from) {
   this._emittingEventsFor[author] = {
     // By default, emit events for dependencies and devDependencies.
     events: devDependencies
       ? ['dependency', 'devDependency']
       : ['dependency'],
     // Emit events for changes after the current sequence number.
-    from: this.sequence() + 1
+    from: from || (this.sequence() + 1)
   }
   return this
 }
