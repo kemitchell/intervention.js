@@ -1,7 +1,7 @@
 {
   "name": "intervention",
   "description": "follow the npm registry, emitting events about packages that depend on an author's work",
-  "version": "0.0.0",
+  "version": "1.0.0-pre-1",
   "author": "Kyle E. Mitchell <kyle@kemitchell.com> (https://kemitchell.com/)",
   "dependencies": {
     "async.map": "^0.5.2",
