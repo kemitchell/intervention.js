@@ -1,23 +1,32 @@
 var Intervention = require('./')
-var assert = require('assert')
+var tape = require('tape')
 var memdb = require('memdb')
 
-var receivedEvent = false
-
-process.on('exit', function () {
-  assert(receivedEvent, 'received event')
+tape('Dominic Tarr\'s first', function (test) {
+  new Intervention(memdb())
+  .once('dependency', function (author, depending, dependency) {
+    test.equal(
+      author, 'dominic.tarr@gmail.com',
+      'author is Dominic'
+    )
+    test.deepEqual(
+      depending, {name: 'couch-sync', semver: '0.0.1'},
+      'depending has name and semver'
+    )
+    test.deepEqual(
+      dependency, {name: 'json-rest', range: '1'},
+      'dependency has name and range'
+    )
+    test.equal(
+      this.sequence(), 236,
+      'sequence number is 236'
+    )
+    this.stop()
+    test.end()
+  })
+  .on('error', function (error) {
+    test.ifError(error)
+  })
+  .emitEventsFor('dominic.tarr@gmail.com', false, 1)
+  .start()
 })
-
-new Intervention(memdb())
-.once('dependency', function (author, depending, dependency) {
-  receivedEvent = true
-  assert.equal(author, 'dominic.tarr@gmail.com')
-  assert.deepEqual(depending, {name: 'couch-sync', semver: '0.0.1'})
-  assert.deepEqual(dependency, {name: 'json-rest', range: '1'})
-  this.stop()
-})
-.on('error', function (error) {
-  assert.ifError(error)
-})
-.emitEventsFor('dominic.tarr@gmail.com', false, 1)
-.start()
