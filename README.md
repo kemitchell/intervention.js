@@ -1,8 +1,8 @@
 ```javascript
 var Intervention = require('intervention')
-var memdb = require('memdb')
+var level = require('level')
 
-var emitter = new Intervention(memdb())
+var emitter = new Intervention(level('./intervention'))
 // Emit events for new deps.
 .emitEventsFor('npmusername')
 // Emit events...
