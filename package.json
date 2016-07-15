@@ -24,6 +24,13 @@
   "files": [
     "index.js"
   ],
+  "keywords": [
+    "dependencies",
+    "follower",
+    "npm",
+    "packages",
+    "registry"
+  ],
   "license": "MIT",
   "repository": "kemitchell/intervention.js",
   "scripts": {
