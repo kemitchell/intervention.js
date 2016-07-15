@@ -19,16 +19,18 @@ var emitter = new Intervention(level('./intervention'))
 )
 .on('dependency', function (user, depending, dependency) {
   console.log(
-    '%s@%s depends on %s\'s %s@%s',
-    depending.name, depending.semver,
-    user, dependency.name, dependency.range
+    '%s: %s@%s (by %j) depends on %s@%s (by %j)',
+    user,
+    depending.name, depending.range, depending.publishers,
+    dependency.name, dependency.semver, dependency.publishers
   )
 })
 .on('devDependency', function (user, depending, dependency) {
   console.log(
-    '%s@%s depends on %s\'s %s@%s',
-    depending.name, depending.semver,
-    user, dependency.name, dependency.range
+    '%s: %s@%s (by %j) depends on %s@%s (by %j)',
+    user,
+    depending.name, depending.range, depending.publishers,
+    dependency.name, dependency.semver, dependency.publishers
   )
 })
 emitter.start()
