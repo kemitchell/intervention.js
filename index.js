@@ -198,35 +198,48 @@ prototype._emitEvent = function (event, depending, dependencies, callback) {
 
     function emitEventsFor (dependency, done) {
       // List all known versions of the dependency.
-      var name = dependency.name
-      self._semversOf(name, function (error, versions) {
+      self._semversOf(dependency.name, function (error, versions) {
         if (error) return done(error)
         if (versions.length === 0) return done()
 
         // Find the highest version that satisfies the dependency range.
-        var max = maxSatisfying(versions, dependency.range)
-        if (max === null) return done()
+        var semver = maxSatisfying(versions, dependency.range)
+        if (semver === null) return done()
 
         // Find the author and users who have published that dependency.
-        self._publishersOf(name, max, function (error, publishers) {
-          if (error) return done(error)
-          if (publishers.length === 0) return done()
+        self._publishersOf(
+          dependency.name, semver,
+          function (error, dependencyPublishers) {
+            if (error) return done(error)
+            if (dependencyPublishers.length === 0) return done()
 
-          // For the author and each contributor...
-          publishers.forEach(function (user) {
-            var options = self._emittingEventsFor[user]
-            // Not emitting events for this user.
-            if (options === undefined) return
-            // Not emitting this kind of event for the user.
-            if (options.events.indexOf(event) === -1) return
-            // Not emitting notifications for this user at this sequence.
-            if (options.from > sequence) return
+            // For the author and each contributor...
+            dependencyPublishers.forEach(function (user) {
+              var options = self._emittingEventsFor[user]
 
-            // It's a match. Emit an event.
-            self.emit(event, user, depending, dependency)
-          })
-          done()
-        })
+              // Not emitting events for this user.
+              if (options === undefined) return
+              // Not emitting this kind of event for the user.
+              if (options.events.indexOf(event) === -1) return
+              // Not emitting notifications for this user at this sequence.
+              if (options.from > sequence) return
+
+              // It's a match. Emit an event.
+              dependency.publishers = dependencyPublishers
+
+              self._publishersOf(
+                depending.name, depending.semver,
+                function (error, dependingPublishers) {
+                  if (error) return done(error)
+
+                  depending.publishers = dependingPublishers
+                  self.emit(event, user, depending, dependency)
+                }
+              )
+            })
+            done()
+          }
+        )
       })
     },
     callback

@@ -12,12 +12,20 @@ tape('dominictarr\'s first', function (test) {
       'author is dominictarr'
     )
     test.deepEqual(
-      depending, {name: 'asynct', semver: '1.0.0'},
-      '`depending` has `.name` and `.semver`'
+      depending, {
+        name: 'asynct',
+        publishers: ['dominictarr'],
+        semver: '1.0.0'
+      },
+      '`depending` has `.name`, `.publishers`, and `.semver`'
     )
     test.deepEqual(
-      dependency, {name: 'ctrlflow', range: '>=0.0.3'},
-      '`dependency` has `.name` and `.range`'
+      dependency, {
+        name: 'ctrlflow',
+        publishers: ['dominictarr'],
+        range: '>=0.0.3'
+      },
+      '`dependency` has `.name`, `.publishers`, and `.range`'
     )
     test.equal(
       this.sequence(), 3415,
